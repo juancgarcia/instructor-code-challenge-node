@@ -1,0 +1,80 @@
+<html>
+<head>
+</head>
+<body>
+
+<div id="search">
+    <form id="omdb-form" onsubmit="return false;" action="#">
+        <label for="s">Title:</label>
+        <input type="text" id="s" name="s">
+        <button id="submit" type="submit" 
+        onclick='fireSearch(document.getElementById("omdb-form"));'>Search</button>
+    </form>
+</div>
+
+<div id="results"></div>
+
+<script type="text/javascript">
+
+    function formatLineResult(item) {
+        item = item || {};
+        // item.Poster
+        //(item.Poster != "N/A" ? "<img width=\"100\" src=\""+item.Poster+"\"></img>" : "<div>No Poster</div>")+
+        // item.Title
+        // item.Year
+        // item.imdbID
+        // item.Type
+
+        return "<div>"+item.Title+" ("+item.Year+")</div>";
+    }
+
+    function searchResults () {
+
+        var resultsDiv = document.getElementById("results"),
+            defaults = {"Search": [], "totalResults": 0, "Response": false},
+            data = JSON.parse(this.responseText) || defaults;
+            
+        data.Response = data.Response === true || data.Response != "False";
+
+        if(!data.Response){
+            resultsDiv.innerHTML = "<div>"+data.Error+"</div>";
+            return;
+        }
+        resultsDiv.innerHTML = "<div>Results: "+data.totalResults+"</div>";
+
+        data.Search.forEach(function(item){
+            resultsDiv.innerHTML += formatLineResult(item);
+        });
+
+        resultsDiv.innerHTML += "<div>Results: "+data.totalResults+"</div>";
+    }
+
+    // http://www.omdbapi.com/?s=big+short&plot=short&r=json
+    function fireSearch (form){
+        var queryData = {
+            "s": null,
+            "type": "movie",
+            "plot": "short",
+            "r": "json"
+        };
+        var apiElements = Object.keys(queryData);
+        var queryURL = "http://www.omdbapi.com/?";
+
+        for(var i=0; i<form.elements.length; i++){
+            var item = form.elements[i];
+            var idx = apiElements.indexOf(item.id);
+            if( idx > -1)
+                queryData[item.id] = item.value;
+        };
+
+        var queryString = Object.keys(queryData).map(function(x){return x+"="+queryData[x];}).join("&");
+
+        var oReq = new XMLHttpRequest();
+        oReq.addEventListener("load", searchResults);
+        oReq.open("GET", queryURL+queryString);
+        oReq.send();
+    }
+
+</script>
+</body>
+</html>
