@@ -11,11 +11,14 @@
         }
         #detail {
             float: left;
-            width: 25em;
+            width: 42em;
             background-color: rgba(194, 232, 225, 0.65);
         }
-        ul {
-
+        #detail ul, #detail img {
+            float: left;
+        }
+        #detail ul {
+            width: 20em;
         }
         li {
             list-style: none;
@@ -154,11 +157,18 @@
             return;
         }
 
-        var list = Object.keys(data).map(function(x){
+        var details = Object.keys(data).map(function(x){
+            if(x == "Poster") return false;
             return "<li>"+x+": "+data[x]+"</li>";
         }).join("\r\n");
 
-        detailDiv.innerHTML = "<ul>\r\n" + list + "\r\n</ul>";
+        details = "<ul>\r\n" + details + "\r\n</ul>";
+
+        // Add Poster if available
+        if(data.Poster != "N/A")
+            details += "\r\n<img src=\""+data.Poster+"\"></img>";
+
+        detailDiv.innerHTML = details;
     }
 
     function getDetails (imdbID) {
