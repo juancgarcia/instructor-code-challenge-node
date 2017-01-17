@@ -174,8 +174,9 @@
         details = "<ul>\r\n" + details + "\r\n</ul>";
 
         // Add Poster if available
-        if(data.Poster != "N/A")
-            details += "\r\n<img src=\""+data.Poster+"\"></img>";
+        var poster = (data.Poster != "N/A") ? data.Poster : "/poster-not-available.jpg"
+        
+        details += "\r\n<img src=\""+poster+"\"></img>";
 
         detailDiv.innerHTML = details;
     }
