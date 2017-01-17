@@ -1,5 +1,26 @@
 <html>
 <head>
+    <style>
+        #results {
+            float: left;
+            width: 25em;
+            background-color: rgba(194, 213, 232, 0.65);
+        }
+        #results div.link:hover {
+            text-decoration: underline;
+        }
+        #detail {
+            float: left;
+            width: 25em;
+            background-color: rgba(194, 232, 225, 0.65);
+        }
+        ul {
+
+        }
+        li {
+            list-style: none;
+        }
+    </style>
 </head>
 <body>
 
@@ -8,15 +29,24 @@
         <label for="s">Title:</label>
         <input type="text" id="s" name="s">
         <button id="submit" type="submit" 
-        onclick='fireSearch(document.getElementById("omdb-form"));'>Search</button>
+        onclick='runSearch(document.getElementById("omdb-form"));'>Search</button>
     </form>
 </div>
 
-<div id="results"></div>
+<div id="results"></div><div id="detail"></div>
 
 <script type="text/javascript">
 
-    function formatLineResult(item) {
+    var lastSearch = "",
+        lastPage = 1,
+        lastTotal = 0;
+
+    function buildQueryString (parts, url) {
+        url = (url || "") + "?";
+        return url + Object.keys(parts).map(function(x){return x+"="+parts[x];}).join("&");
+    }
+
+    function formatLineResult (item) {
         item = item || {};
         // item.Poster
         //(item.Poster != "N/A" ? "<img width=\"100\" src=\""+item.Poster+"\"></img>" : "<div>No Poster</div>")+
@@ -25,53 +55,128 @@
         // item.imdbID
         // item.Type
 
-        return "<div>"+item.Title+" ("+item.Year+")</div>";
+        return "<div class=\"link\" onclick=\"getDetails('"+item.imdbID+"');\">"+item.Title+" ("+item.Year+")</div>";
     }
 
-    function searchResults () {
+    function displaySearchResults () {
 
         var resultsDiv = document.getElementById("results"),
-            defaults = {"Search": [], "totalResults": 0, "Response": false},
+            detailDiv = document.getElementById("detail"),
+            defaults = {"Search": [], "totalResults": 0, "Response": "False"},
             data = JSON.parse(this.responseText) || defaults;
-            
-        data.Response = data.Response === true || data.Response != "False";
 
+        // make a boolean out of the "Response" field
+        data.Response = data.Response === true || data.Response != "False";
+        
+        // clear details view
+        detailDiv.innerHTML = "";
+
+        // display errors, if any
         if(!data.Response){
             resultsDiv.innerHTML = "<div>"+data.Error+"</div>";
             return;
         }
-        resultsDiv.innerHTML = "<div>Results: "+data.totalResults+"</div>";
+
+        lastTotal = data.totalResults;
+
+        resultsDiv.innerHTML = "";
 
         data.Search.forEach(function(item){
             resultsDiv.innerHTML += formatLineResult(item);
         });
 
+        var prevLink = "", nextLink = "";
+
+        if(lastPage > 1) { // add link
+            prevLink = "<a class=\"link\" onclick=\"runSearch(lastPage - 1)\">Prev</a>";
+        }
+
+        if(lastPage * 10 < lastTotal) { // add link
+            nextLink = "<a class=\"link\" onclick=\"runSearch(lastPage + 1)\">Next</a>";
+        }
+
+        resultsDiv.innerHTML += "<div>&nbsp;</div>";
+        resultsDiv.innerHTML += "<div>"+prevLink+" [Page: "+lastPage+" of "+Math.ceil(lastTotal/10)+"] "+nextLink+"</div>";
+        resultsDiv.innerHTML += "<div>&nbsp;</div>";
         resultsDiv.innerHTML += "<div>Results: "+data.totalResults+"</div>";
     }
 
     // http://www.omdbapi.com/?s=big+short&plot=short&r=json
-    function fireSearch (form){
+    function runSearch (input) {
         var queryData = {
             "s": null,
+            "type": "movie",
+            "r": "json"
+        };
+
+        if(input instanceof Element) {
+            // from Form submit
+            var form = input
+            var apiElements = Object.keys(queryData);
+
+            // filter the form fields using queryData's property names
+            for(var i=0; i<form.elements.length; i++){
+                var item = form.elements[i];
+                var idx = apiElements.indexOf(item.id);
+                if( idx > -1)
+                    queryData[item.id] = item.value;
+            };
+            queryData.page = 1;
+
+        } else {
+            // from page links
+            var page = input;
+            queryData.s = lastSearch;
+            queryData.page = page;
+        }
+
+        lastSearch = queryData.s;
+        lastPage = queryData.page;
+
+        omdbRequest(queryData, displaySearchResults)
+    }
+
+    function displayDetail () {
+
+        var detailDiv = document.getElementById("detail"),
+            defaults = {"Response":"False"},
+            data = JSON.parse(this.responseText) || defaults;
+
+        // make a boolean out of the "Response" field
+        data.Response = data.Response === true || data.Response != "False";
+        
+        // clear details view
+        detailDiv.innerHTML = "";
+
+        // display errors, if any
+        if(!data.Response){
+            detailDiv.innerHTML = "<div>"+data.Error+"</div>";
+            return;
+        }
+
+        var list = Object.keys(data).map(function(x){
+            return "<li>"+x+": "+data[x]+"</li>";
+        }).join("\r\n");
+
+        detailDiv.innerHTML = "<ul>\r\n" + list + "\r\n</ul>";
+    }
+
+    function getDetails (imdbID) {
+        var queryData = {
+            "i": imdbID,
             "type": "movie",
             "plot": "short",
             "r": "json"
         };
-        var apiElements = Object.keys(queryData);
-        var queryURL = "http://www.omdbapi.com/?";
+        omdbRequest(queryData, displayDetail);
+    }
 
-        for(var i=0; i<form.elements.length; i++){
-            var item = form.elements[i];
-            var idx = apiElements.indexOf(item.id);
-            if( idx > -1)
-                queryData[item.id] = item.value;
-        };
-
-        var queryString = Object.keys(queryData).map(function(x){return x+"="+queryData[x];}).join("&");
+    function omdbRequest (data, callback) {
+        var queryURL = "http://www.omdbapi.com/";
 
         var oReq = new XMLHttpRequest();
-        oReq.addEventListener("load", searchResults);
-        oReq.open("GET", queryURL+queryString);
+        oReq.addEventListener("load", callback);
+        oReq.open("GET", buildQueryString(data, queryURL));
         oReq.send();
     }
 
