@@ -6,7 +6,7 @@
             width: 25em;
             background-color: rgba(194, 213, 232, 0.65);
         }
-        #results div.link:hover {
+        #results div span.link:hover {
             text-decoration: underline;
         }
         #detail {
@@ -60,7 +60,7 @@
 
         var checkbox = 'Favorite: <input id="check_list_'+item.imdbID+'" type="checkbox" class="check_'+item.imdbID+'" onclick="toggleFavorite(this, \''+item.imdbID+'\', \''+item.Title+'\')">';
 
-        return "<div class=\"link\" onclick=\"getDetails('"+item.imdbID+"');\">"+item.Title+" ("+item.Year+")"+checkbox+"</div>";
+        return "<div><span class=\"link\" onclick=\"getDetails('"+item.imdbID+"');\">"+item.Title+" ("+item.Year+")</span> "+checkbox+"</div>";
         
     }
 
