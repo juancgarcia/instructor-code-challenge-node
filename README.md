@@ -2,6 +2,6 @@
 
 ## WDI Instructor Code Challenge
 
-### Front-end chosen: Node.js
+### Back-end chosen: Node.js
 
 ### Deployed to Heroku: [generalassemblyomdb.herokuapp.com](http://generalassemblyomdb.herokuapp.com/)
