@@ -58,7 +58,10 @@
         // item.imdbID
         // item.Type
 
-        return "<div class=\"link\" onclick=\"getDetails('"+item.imdbID+"');\">"+item.Title+" ("+item.Year+")</div>";
+        var checkbox = 'Favorite: <input id="check_list_'+item.imdbID+'" type="checkbox" class="check_'+item.imdbID+'" onclick="toggleFavorite(this, \''+item.imdbID+'\', \''+item.Title+'\')">';
+
+        return "<div class=\"link\" onclick=\"getDetails('"+item.imdbID+"');\">"+item.Title+" ("+item.Year+")"+checkbox+"</div>";
+        
     }
 
     function displaySearchResults () {
@@ -86,8 +89,17 @@
 
         data.Search.forEach(function(item){
             resultsDiv.innerHTML += formatLineResult(item);
+
+            // set favorite checkbox
+            getFavorite(item.imdbID, function(){
+                var el = document.getElementById('check_list_'+item.imdbID);
+                var fav = JSON.parse(this.responseText || {});
+
+                el.checked = fav && fav.oid == item.imdbID;
+            });
         });
 
+        // paging
         var prevLink = "", nextLink = "";
 
         if(lastPage > 1) { // add link
@@ -209,7 +221,7 @@
     }
 
     function toggleFavorite (el, imdbID, title) {
-        var checks = Array(document.getElementsByClassName("check_"+imdbID));
+        var checks = document.getElementsByClassName("check_"+imdbID);
             first = (checks.length > 0) ? checks[0] : null;
 
         if(!first)
@@ -218,7 +230,7 @@
         var cb = function(){
             var fav = JSON.parse(this.responseText || {});
 
-            checks.forEach(function(checkbox){
+            Array.prototype.forEach.call(checks, function(checkbox){
                 checkbox.checked = fav && fav.oid == imdbID;
             });
         };
