@@ -95,7 +95,7 @@
 
         lastTotal = data.totalResults;
 
-        resultsDiv.innerHTML = "";
+        resultsDiv.innerHTML = "<div>Search Results</div>\r\n<div>&nbsp;</div";
 
         data.Search.forEach(function(item){
             resultsDiv.innerHTML += formatLineResult(item);
