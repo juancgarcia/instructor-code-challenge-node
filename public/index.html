@@ -1,6 +1,7 @@
 <html>
 <head>
     <style>
+        /* make #search and #favorite sit side-by-side horizontally */
         #search {
             float: left;
             width: 25em;
@@ -9,27 +10,37 @@
             float: left;
             width: 42em;
         }
+
+        /*  also set #results and #detail horizontally,
+            but prevent them sharing the search/favorite line with "clear" */
         #results {
             clear: both;
             float: left;
             width: 25em;
             background-color: rgba(194, 213, 232, 0.65);
         }
+
+        /* highjack a span as our link container */
         #results div span.link:hover {
             text-decoration: underline;
+            cursor: pointer;
         }
+
         #detail {
             float: left;
             width: 42em;
             background-color: rgba(194, 232, 225, 0.65);
         }
+        /* float the details left to allow movie posters to sit on the right side */
         #detail ul, #detail img {
             float: left;
         }
         #detail ul {
             width: 20em;
         }
+
         li {
+            /* get rid of those bullets */
             list-style: none;
         }
     </style>
@@ -68,7 +79,10 @@
         // item.imdbID
         // item.Type
 
+        // favorites checkbox
         var checkbox = ' <input id="check_list_'+item.imdbID+'" type="checkbox" class="check_'+item.imdbID+'" onclick="toggleFavorite(this, \''+item.imdbID+'\', \''+item.Title+'\')" '+(checked?"checked":"")+'>';
+
+        // Year not stored in favorite list, prevent empty parenthesis display in this case
         var year = (item.Year)?" ("+item.Year+")":"";
 
         return "<div><span class=\"link\" onclick=\"getDetails('"+item.imdbID+"');\">"+item.Title+year+"</span> "+checkbox+"</div>";
@@ -95,6 +109,7 @@
 
         lastTotal = data.totalResults;
 
+        // display a heading
         resultsDiv.innerHTML = "<div>Search Results</div>\r\n<div>&nbsp;</div";
 
         data.Search.forEach(function(item){
@@ -112,12 +127,12 @@
         // paging
         var prevLink = "", nextLink = "";
 
-        if(lastPage > 1) { // add link
-            prevLink = "<a class=\"link\" onclick=\"runSearch(lastPage - 1)\">Prev</a>";
+        if(lastPage > 1) {
+            prevLink = "<span class=\"link\" onclick=\"runSearch(lastPage - 1)\">Prev</span>";
         }
 
-        if(lastPage * 10 < lastTotal) { // add link
-            nextLink = "<a class=\"link\" onclick=\"runSearch(lastPage + 1)\">Next</a>";
+        if(lastPage * 10 < lastTotal) {
+            nextLink = "<span class=\"link\" onclick=\"runSearch(lastPage + 1)\">Next</span>";
         }
 
         resultsDiv.innerHTML += "<div>&nbsp;</div>";
@@ -192,6 +207,7 @@
             return "<li>"+x+": "+detail_obj[x]+"</li>";
         }).join("\r\n");
 
+        // favorites checkbox
         details += '<li>Favorite: <input id="check_detail_'+detail_obj.imdbID+'" type="checkbox" class="check_'+detail_obj.imdbID+'" onclick="toggleFavorite(this, \''+detail_obj.imdbID+'\', \''+detail_obj.Title+'\')"></li>';
 
         details = "<ul>\r\n" + details + "\r\n</ul>";
@@ -286,18 +302,25 @@
     }
 
     function omdbRequest (data, callback) {
-        var queryURL = "http://www.omdbapi.com/";
+        // dropped protocol to allow both cleartext and secure following how the main page was fetched
+        var queryURL = "//www.omdbapi.com/";
 
         serverRequest(data, callback, queryURL);
     }
 
+    // where the ajax magic happens
     function serverRequest (data, callback, url, method) {
         url = url || "/";
+        // default to GET Requests
         method = method || "GET";
 
         var oReq = new XMLHttpRequest();
         oReq.addEventListener("load", callback);
+
+        // all non-POST methods send variables in the query string
         oReq.open(method, url + (method != "POST" ? "?"+buildQueryString(data) : ""));
+
+        // send variables in body for POST
         if(method == "POST")
             oReq.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
         oReq.send(method == "POST" ? buildQueryString(data) : undefined);
