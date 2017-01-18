@@ -45,9 +45,8 @@
         lastPage = 1,
         lastTotal = 0;
 
-    function buildQueryString (parts, url) {
-        url = (url || "") + "?";
-        return url + Object.keys(parts).map(function(x){return x+"="+parts[x];}).join("&");
+    function buildQueryString (parts) {
+        return Object.keys(parts).map(function(x){return x+"="+parts[x];}).join("&");
     }
 
     function formatLineResult (item) {
@@ -144,17 +143,17 @@
 
         var detailDiv = document.getElementById("detail"),
             defaults = {"Response":"False"},
-            data = JSON.parse(this.responseText) || defaults;
+            detail_obj = JSON.parse(this.responseText) || defaults;
 
         // make a boolean out of the "Response" field
-        data.Response = data.Response === true || data.Response != "False";
+        detail_obj.Response = detail_obj.Response === true || detail_obj.Response != "False";
         
         // clear details view
         detailDiv.innerHTML = "";
 
         // display errors, if any
-        if(!data.Response){
-            detailDiv.innerHTML = "<div>"+data.Error+"</div>";
+        if(!detail_obj.Response){
+            detailDiv.innerHTML = "<div>"+detail_obj.Error+"</div>";
             return;
         }
 
@@ -163,22 +162,33 @@
         // also skip the Poster field so we can add it using an img tag
         skips.push("Poster");
 
-        // inflate the data object into an html list
-        var details = Object.keys(data).map(function(x){
+        // inflate the detail_obj object into an html list
+        var details = Object.keys(detail_obj).map(function(x){
             // ingnore fields in "skips"
             if(skips.indexOf(x) > -1) return;
 
-            return "<li>"+x+": "+data[x]+"</li>";
+            return "<li>"+x+": "+detail_obj[x]+"</li>";
         }).join("\r\n");
+
+        details += '<li>Favorite: <input id="check_detail_'+detail_obj.imdbID+'" type="checkbox" class="check_'+detail_obj.imdbID+'" onclick="toggleFavorite(this, \''+detail_obj.imdbID+'\', \''+detail_obj.Title+'\')"></li>';
 
         details = "<ul>\r\n" + details + "\r\n</ul>";
 
         // Add Poster if available
-        var poster = (data.Poster != "N/A") ? data.Poster : "/poster-not-available.jpg"
+        var poster = (detail_obj.Poster != "N/A") ? detail_obj.Poster : "/poster-not-available.jpg"
         
         details += "\r\n<img src=\""+poster+"\"></img>";
 
         detailDiv.innerHTML = details;
+
+
+        // set favorite checkbox
+        getFavorite(detail_obj.imdbID, function(){
+            var el = document.getElementById('check_detail_'+detail_obj.imdbID);
+            var fav = JSON.parse(this.responseText || {});
+
+            el.checked = fav && fav.oid == detail_obj.imdbID;
+        });
     }
 
     function getDetails (imdbID) {
@@ -191,13 +201,65 @@
         omdbRequest(queryData, displayDetail);
     }
 
+    function getFavorite (imdbID, callback) {
+        var queryData = {
+            "oid": imdbID
+        };
+        serverRequest(queryData, callback, "/favorites");
+    }
+
+    function toggleFavorite (el, imdbID, title) {
+        var checks = Array(document.getElementsByClassName("check_"+imdbID));
+            first = (checks.length > 0) ? checks[0] : null;
+
+        if(!first)
+            return false;
+
+        var cb = function(){
+            var fav = JSON.parse(this.responseText || {});
+
+            checks.forEach(function(checkbox){
+                checkbox.checked = fav && fav.oid == imdbID;
+            });
+        };
+
+        if(el.checked)
+            postFavorite (imdbID, title, cb);
+        else
+            deleteFavorite(imdbID, cb);
+    }
+
+    function postFavorite (imdbID, name, callback) {
+        var queryData = {
+            "oid": imdbID,
+            "name": name
+        };
+        serverRequest(queryData, callback, "/favorites", "POST");
+    }
+
+    function deleteFavorite (imdbID, callback) {
+        var queryData = {
+            "oid": imdbID
+        };
+        serverRequest(queryData, callback, "/favorites", "DELETE");
+    }
+
     function omdbRequest (data, callback) {
         var queryURL = "http://www.omdbapi.com/";
 
+        serverRequest(data, callback, queryURL);
+    }
+
+    function serverRequest (data, callback, url, method) {
+        url = url || "/";
+        method = method || "GET";
+
         var oReq = new XMLHttpRequest();
         oReq.addEventListener("load", callback);
-        oReq.open("GET", buildQueryString(data, queryURL));
-        oReq.send();
+        oReq.open(method, url + (method != "POST" ? "?"+buildQueryString(data) : ""));
+        if(method == "POST")
+            oReq.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        oReq.send(method == "POST" ? buildQueryString(data) : undefined);
     }
 
 </script>
