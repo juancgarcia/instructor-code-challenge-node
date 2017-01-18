@@ -1,7 +1,16 @@
 <html>
 <head>
     <style>
+        #search {
+            float: left;
+            width: 25em;
+        }
+        #favorite {
+            float: left;
+            width: 42em;
+        }
         #results {
+            clear: both;
             float: left;
             width: 25em;
             background-color: rgba(194, 213, 232, 0.65);
@@ -34,7 +43,7 @@
         <button id="submit" type="submit" 
         onclick='runSearch(document.getElementById("omdb-form"));'>Search</button>
     </form>
-</div>
+</div> <div id="favorite"><a onclick="getFavorites(displayFavorites);">Show Favorites</a></div>
 
 <div id="results"></div><div id="detail"></div>
 
@@ -49,8 +58,9 @@
         return Object.keys(parts).map(function(x){return x+"="+parts[x];}).join("&");
     }
 
-    function formatLineResult (item) {
+    function formatLineResult (item, checked) {
         item = item || {};
+        checked = !!checked;
         // item.Poster
         //(item.Poster != "N/A" ? "<img width=\"100\" src=\""+item.Poster+"\"></img>" : "<div>No Poster</div>")+
         // item.Title
@@ -58,10 +68,10 @@
         // item.imdbID
         // item.Type
 
-        var checkbox = 'Favorite: <input id="check_list_'+item.imdbID+'" type="checkbox" class="check_'+item.imdbID+'" onclick="toggleFavorite(this, \''+item.imdbID+'\', \''+item.Title+'\')">';
+        var checkbox = ' <input id="check_list_'+item.imdbID+'" type="checkbox" class="check_'+item.imdbID+'" onclick="toggleFavorite(this, \''+item.imdbID+'\', \''+item.Title+'\')" '+(checked?"checked":"")+'>';
+        var year = (item.Year)?" ("+item.Year+")":"";
 
-        return "<div><span class=\"link\" onclick=\"getDetails('"+item.imdbID+"');\">"+item.Title+" ("+item.Year+")</span> "+checkbox+"</div>";
-        
+        return "<div><span class=\"link\" onclick=\"getDetails('"+item.imdbID+"');\">"+item.Title+year+"</span> "+checkbox+"</div>";
     }
 
     function displaySearchResults () {
@@ -211,6 +221,25 @@
             "r": "json"
         };
         omdbRequest(queryData, displayDetail);
+    }
+
+    function displayFavorites () {
+
+        var resultsDiv = document.getElementById("results"),
+            detailDiv = document.getElementById("detail"),
+            data = JSON.parse(this.responseText) || [];
+        
+        // clear details view
+        detailDiv.innerHTML = "";
+        resultsDiv.innerHTML = "<div>Favorites</div>\r\n<div>&nbsp;</div";
+
+        data.forEach(function(item){
+            resultsDiv.innerHTML += formatLineResult({Title: item.name, imdbID: item.oid}, true);
+        });
+    }
+
+    function getFavorites (callback) {
+        serverRequest({}, callback, "/favorites");
     }
 
     function getFavorite (imdbID, callback) {
