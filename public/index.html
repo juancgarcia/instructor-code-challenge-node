@@ -50,8 +50,8 @@
 <div id="search">
     <form id="omdb-form" onsubmit="return false;" action="#">
         <label for="s">Search by Movie Title:</label>
-        <input type="text" id="s" name="s">
-        <button id="submit" type="submit" 
+        <input type="text" id="q" name="q">
+        <button id="submit" type="submit"
         onclick='runSearch(document.getElementById("omdb-form"));'>Search</button>
     </form>
 </div> <div id="favorite"><a onclick="getFavorites(displayFavorites);">Show Favorites</a></div>
@@ -69,6 +69,10 @@
         return Object.keys(parts).map(function(x){return x+"="+parts[x];}).join("&");
     }
 
+    function dateStringFormat(date){ // yyyy-mm-dd
+        return date.replace(/^(\d+)-.*/, '$1');
+    }
+
     function formatLineResult (item, checked) {
         item = item || {};
         checked = !!checked;
@@ -80,12 +84,12 @@
         // item.Type
 
         // favorites checkbox
-        var checkbox = ' <input id="check_list_'+item.imdbID+'" type="checkbox" class="check_'+item.imdbID+'" onclick="toggleFavorite(this, \''+item.imdbID+'\', \''+item.Title+'\')" '+(checked?"checked":"")+'>';
+        var checkbox = ' <input id="check_list_'+item.id+'" type="checkbox" class="check_'+item.id+'" onclick="toggleFavorite(this, \''+item.id+'\', \''+item.name+'\')" '+(checked?"checked":"")+'>';
 
         // Year not stored in favorite list, prevent empty parenthesis display in this case
-        var year = (item.Year)?" ("+item.Year+")":"";
+        var year = (item.premiered)?" ("+item.premiered.replace(/^(\d+)-.*/, '$1')+")":"";
 
-        return "<div><span class=\"link\" onclick=\"getDetails('"+item.imdbID+"');\">"+item.Title+year+"</span> "+checkbox+"</div>";
+        return "<div><span class=\"link\" onclick=\"getDetails('"+item.id+"');\">"+item.name+year+"</span> "+checkbox+"</div>";
     }
 
     function displaySearchResults () {
@@ -97,7 +101,7 @@
 
         // make a boolean out of the "Response" field
         data.Response = data.Response === true || data.Response != "False";
-        
+
         // clear details view
         detailDiv.innerHTML = "";
 
@@ -112,15 +116,15 @@
         // display a heading
         resultsDiv.innerHTML = "<div>Search Results</div>\r\n<div>&nbsp;</div";
 
-        data.Search.forEach(function(item){
-            resultsDiv.innerHTML += formatLineResult(item);
+        data.forEach(function(item){
+            resultsDiv.innerHTML += formatLineResult(item.show);
 
             // set favorite checkbox
-            getFavorite(item.imdbID, function(){
-                var el = document.getElementById('check_list_'+item.imdbID);
+            getFavorite(item.show.id, function(){
+                var el = document.getElementById('check_list_'+item.show.id);
                 var fav = JSON.parse(this.responseText || {});
 
-                el.checked = fav && fav.oid == item.imdbID;
+                el.checked = fav && fav.oid == item.show.id;
             });
         });
 
@@ -141,10 +145,10 @@
         resultsDiv.innerHTML += "<div>Results: "+data.totalResults+"</div>";
     }
 
-    // http://www.omdbapi.com/?s=big+short&plot=short&r=json
+    // http://api.tvmaze.com/search/shows/?q=expanse
     function runSearch (input) {
         var queryData = {
-            "s": null,
+            "q": null,
             "type": "movie",
             "r": "json"
         };
@@ -166,14 +170,14 @@
         } else {
             // from page links
             var page = input;
-            queryData.s = lastSearch;
+            queryData.q = lastSearch;
             queryData.page = page;
         }
 
-        lastSearch = queryData.s;
+        lastSearch = queryData.q;
         lastPage = queryData.page;
 
-        omdbRequest(queryData, displaySearchResults)
+        apiRequest(queryData, displaySearchResults)
     }
 
     function displayDetail () {
@@ -184,7 +188,7 @@
 
         // make a boolean out of the "Response" field
         detail_obj.Response = detail_obj.Response === true || detail_obj.Response != "False";
-        
+
         // clear details view
         detailDiv.innerHTML = "";
 
@@ -214,7 +218,7 @@
 
         // Add Poster if available
         var poster = (detail_obj.Poster != "N/A") ? detail_obj.Poster : "/poster-not-available.jpg"
-        
+
         details += "\r\n<img src=\""+poster+"\"></img>";
 
         detailDiv.innerHTML = details;
@@ -236,7 +240,7 @@
             "plot": "short",
             "r": "json"
         };
-        omdbRequest(queryData, displayDetail);
+        apiRequest(queryData, displayDetail);
     }
 
     function displayFavorites () {
@@ -244,7 +248,7 @@
         var resultsDiv = document.getElementById("results"),
             detailDiv = document.getElementById("detail"),
             data = JSON.parse(this.responseText) || [];
-        
+
         // clear details view
         detailDiv.innerHTML = "";
         resultsDiv.innerHTML = "<div>Favorites</div>\r\n<div>&nbsp;</div";
@@ -301,9 +305,9 @@
         serverRequest(queryData, callback, "/favorites", "DELETE");
     }
 
-    function omdbRequest (data, callback) {
+    function apiRequest (data, callback) {
         // dropped protocol to allow both cleartext and secure following how the main page was fetched
-        var queryURL = "//www.omdbapi.com/";
+        var queryURL = "//api.tvmaze.com/search/shows/";
 
         serverRequest(data, callback, queryURL);
     }
